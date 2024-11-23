@@ -1,28 +1,36 @@
-// server.js
+require('dotenv').config(); // .env 파일 로드
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios'); // axios 모듈을 추가합니다.
-
+const axios = require('axios');
 const app = express();
-const PORT = 3001; // 포트를 지정합니다.
+const PORT = 3001;
 
 app.use(cors());
 
 app.get('/api/hospitals', async (req, res) => {
     try {
-        const response = await axios.get('http://apis.data.go.kr/B552657/ErmctInfoInqireService', {
-            params: {
-                ServiceKey: '%2FrilFVcyYLz5RJ%2F5Iof1ljmcMZLSKL8PN4KHwf7o1EwycSKZh2tt93oPUvQc8F1fySNO%2F0%2BpY6TedkID6WEO%2FA%3D%3D'
-            },
-        });
-        res.set('Content-Type', 'text/xml');
-        res.send(response.data); // 응답을 클라이언트에 보냅니다.
+        const url = 'https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEmrrmRltmUsefulSckbdInfoInqire';
+        const params = {
+            serviceKey: process.env.API_SERVICE_KEY, // 환경 변수 사용
+            STAGE1: '서울특별시'
+        };
+        
+        const response = await axios.get(url, { params, timeout: 10000 });
+        const hospitals = response.data?.response?.body?.items?.item;
+
+        if (!hospitals) {
+            console.error("API 응답 데이터에 items가 없습니다:", response.data);
+            return res.status(500).send("API 응답에 오류가 있습니다.");
+        }
+
+        console.log("추출된 병원 데이터:", hospitals);
+        res.json(hospitals); // JSON 형식으로 응답
     } catch (error) {
-        console.error(error); // 오류를 콘솔에 출력합니다.
-        res.status(500).send(error.message);
+        console.error("API 요청 에러:", error.message);
+        res.status(500).send("서버 오류가 발생했습니다.");
     }
 });
 
 app.listen(PORT, '127.0.0.1', () => {
-    console.log(`프록시 서버가 포트 ${PORT}에서 실행 중입니다.`);
+    console.log(`프록시 서버가 포트 ${PORT}에서 실행 중입니다`);
 });
